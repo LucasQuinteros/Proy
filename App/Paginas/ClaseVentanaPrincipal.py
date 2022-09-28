@@ -143,22 +143,20 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
             self.ZlcdNumber.display(self.acumz/400)
             
         @pyqtSlot(str,int)
+        
         @pyqtSlot(str,int,int)
         def Write_console(self, mensaje: str, Columna: int, numRows : int = None):
             # Create a empty row at bottom of table
             #numRows = self.tableWidget.rowCount()
-            try:
-                if numRows == None:
-                    numRows = self.ConsolaTableWidget.rowCount()
-                    self.ConsolaTableWidget.insertRow(numRows)
-                # Add text to the row
-                    self.ConsolaTableWidget.setItem(numRows,Columna, QtWidgets.QTableWidgetItem(mensaje))
-                else:
-                    self.ConsolaTableWidget.setItem(numRows,Columna, QtWidgets.QTableWidgetItem(mensaje))
-
-                
-            except Exception as e:
-                print(str(e))
+            
+            if numRows == None:
+                numRows = self.ConsolaTableWidget.rowCount()
+                self.ConsolaTableWidget.insertRow(numRows)
+            # Add text to the row
+                self.ConsolaTableWidget.setItem(numRows,Columna, QtWidgets.QTableWidgetItem(mensaje))
+            else:
+                self.ConsolaTableWidget.setItem(numRows,Columna, QtWidgets.QTableWidgetItem(mensaje))
+            
             #self.ConsolaTableWidget.scrollToBottom()
             self.ConsolaTableWidget.resizeColumnsToContents()
             #self.ConsolaTableWidget.resizeRowsToContents()
@@ -251,8 +249,7 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
                 self.statusbar.showMessage("Desconectado")
                 self.actionEnviar_archivo_actual.setEnabled(False)
         
-
-            
+                    
         def Boton_conectar_funcion(self):
             host = self.IPtextline.text()
             port = int(self.PORTtextline.text())    
@@ -265,7 +262,6 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
                 self.DesconectarBoton.setEnabled(True)
                 #self.actionEnviar_archivo_actual.setEnabled(True)
         
- 
         def openFileNameDialog(self):
             options = QFileDialog.Options()
             #options |= QFileDialog.DontUseNativeDialog
