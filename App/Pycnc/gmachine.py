@@ -95,7 +95,7 @@ class GMachine(QObject):
 
     def __check_delta(self, delta):
         pos = self._position + delta
-        if not pos.is_in_aabb(Coordinates(0.0, 0.0, 0.0, 0.0),
+        if not pos.is_in_aabb(Coordinates(0.0, 0.0, 0.0, 0.0),          #funcion en coordinates
                               Coordinates(TABLE_SIZE_X_MM, TABLE_SIZE_Y_MM,
                                           TABLE_SIZE_Z_MM, 0)):
             self.Signal_fin.emit()
@@ -110,10 +110,12 @@ class GMachine(QObject):
             raise GMachineException("out of maximum speed")
 
     def _move_linear(self, delta, velocity):
-        delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,
-                            1.0 / STEPPER_PULSES_PER_MM_Y,
-                            1.0 / STEPPER_PULSES_PER_MM_Z,
-                            1.0 / STEPPER_PULSES_PER_MM_E)
+        
+        delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,  #round esta en coordinates Busca definir el delta en pasos enteros de motor
+                            1.0 / STEPPER_PULSES_PER_MM_Y,  # 1/100 0.01
+                            1.0 / STEPPER_PULSES_PER_MM_Z,  # 1/400 0.0025
+                            1.0 / STEPPER_PULSES_PER_MM_E)  
+        
         if delta.is_zero():
             self.Signal_fin.emit()
             return
@@ -121,7 +123,7 @@ class GMachine(QObject):
         self.__check_delta(delta)
         
         logging.info("Moving linearly {}".format(delta))
-        gen = PulseGeneratorLinear(delta, velocity)
+        gen = PulseGeneratorLinear(delta, velocity)     # paso unidades de paso a pulsos
         self.__check_velocity(gen.max_velocity())
         self.hal.move(gen)
         print("movestart")
@@ -130,7 +132,7 @@ class GMachine(QObject):
         # self.Tmove.start()
         #=======================================================================
         #save position
-        self._position = self._position + delta
+        self._position = self._position + delta         #modifico la posicion de la maquina
 
     @staticmethod
     def __quarter(pa, pb):
@@ -144,20 +146,21 @@ class GMachine(QObject):
             return 4
 
     def __adjust_circle(self, da, db, ra, rb, direction, pa, pb, ma, mb):
-        r = math.sqrt(ra * ra + rb * rb)
+        r = math.sqrt(ra * ra + rb * rb) 
         if r == 0:
             raise GMachineException("circle radius is zero")
-        sq = self.__quarter(-ra, -rb)
-        if da == 0 and db == 0:  # full circle
+        sq = self.__quarter(-ra, -rb) #en que cuadrante de los ejes se encuentra el circulo
+        if da == 0 and db == 0:  # full circle  si los delta son cero el circulo es completo
             ea = da
             eb = db
             eq = 5  # mark as non-existing to check all
-        else:
-            if da - ra == 0:
+        else:                   # Si el circulo no es completo
+            if da - ra == 0:    
                 ea = 0
             else:
                 b = (db - rb) / (da - ra)
                 ea = math.copysign(math.sqrt(r * r / (1.0 + abs(b))), da - ra)
+                    
             eb = math.copysign(math.sqrt(r * r - ea * ea), db - rb)
             eq = self.__quarter(ea, eb)
             ea += ra
@@ -170,6 +173,7 @@ class GMachine(QObject):
                 q -= 1
             else:
                 q += 1
+                
             if q <= 0:
                 q = 4
             elif q >= 5:
@@ -191,7 +195,7 @@ class GMachine(QObject):
         return ea, eb
 
     def _move_circular(self, delta, radius, velocity, direction):
-        delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,
+        delta = delta.round(1.0 / STEPPER_PULSES_PER_MM_X,#round esta en coordinates Busca definir el delta en pasos enteros de motor
                             1.0 / STEPPER_PULSES_PER_MM_Y,
                             1.0 / STEPPER_PULSES_PER_MM_Z,
                             1.0 / STEPPER_PULSES_PER_MM_E)
@@ -312,21 +316,22 @@ class GMachine(QObject):
             c = 'G1'
         # read parameters
         if self._absoluteCoordinates:
-            coord = gcode.coordinates(self._position - self._local,
-                                      self._convertCoordinates)
-            coord = coord + self._local
-            delta = coord - self._position
+            coord = gcode.coordinates(self._position - self._local, #gcode coordinates devuelve los params del gcode si se le envia 
+                                      self._convertCoordinates)        #un objeto coordinates no le interesan los valores
+            print(self._position - self._local, self._position , self._local, coord)
+            coord = coord + self._local                             #solo sirve si se usa G92
+            delta = coord - self._position                          
         else:
-            delta = gcode.coordinates(Coordinates(0.0, 0.0, 0.0, 0.0),
+            delta = gcode.coordinates(Coordinates(0.0, 0.0, 0.0, 0.0),  # Al ser relativas no necesita referencia de donde esta la maquina
                                       self._convertCoordinates)
-            # coord = self._position + delta
+            #coord = self._position + delta
         
         velocity = gcode.get('F', self._velocity)
-        radius = gcode.radius(Coordinates(0.0, 0.0, 0.0, 0.0),
+        radius = gcode.radius(Coordinates(0.0, 0.0, 0.0, 0.0), # I, J ,K segun gcode params
                               self._convertCoordinates)
         
         # check parameters
-        if velocity < MIN_VELOCITY_MM_PER_MIN:
+        if velocity < MIN_VELOCITY_MM_PER_MIN:      #chequeo que la vel del gcode sea superior a la minima
             self.Signal_fin.emit()
             raise GMachineException("feed speed too low")
         

@@ -65,8 +65,6 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
             ###            CONEXION DE SE�ALES            ####
            
             #self.Sig_archivo.connect(self.WMaquina.StartFile)
-            
-
             self.Signal_enviarmensaje.connect(self.WCliente.SendMessage_to_server)
 
             
@@ -138,12 +136,11 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
             self.acumx += posX
             self.acumy += posY
             self.acumz += posZ
-            self.XlcdNumber.display(self.acumx/100)
-            self.YlcdNumber.display(self.acumy/100)
-            self.ZlcdNumber.display(self.acumz/400)
+            self.XlcdNumber.display(self.acumx//100)
+            self.YlcdNumber.display(self.acumy//100)
+            self.ZlcdNumber.display(self.acumz//400)
             
         @pyqtSlot(str,int)
-        
         @pyqtSlot(str,int,int)
         def Write_console(self, mensaje: str, Columna: int, numRows : int = None):
             # Create a empty row at bottom of table
