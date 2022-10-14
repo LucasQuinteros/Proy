@@ -1,7 +1,7 @@
 from __future__ import division
 
 import Pycnc.logging_config as logging_config
-from Pycnc.hal import hal1
+import Pycnc.hal as h
 from Pycnc.pulses import *
 from Pycnc.coordinates import *
 from Pycnc.enums import *
@@ -42,12 +42,12 @@ class GMachine(QObject):
         self._fan_state = False
         self._heaters = dict()
         self.reset()
-        self.hal = hal1()
+        print('Gmachine hal1')
+        self.hal = h.hal()
+        print('halvirtual watchdog ')
         self.watchdog = HardwareWatchdog()
         #self.hal.Signal_msg.connect(self.pos_instantanea_funcion)
-        
         #self.Wmove.moveToThread(self.Tmove)
-        
         #self.Wmove.Sig_msg_m.connect(self.pos_instantanea_funcion)
         #self.hal.Signal_msg.connect(self.pos_instantanea_funcion)
         #self.hal.Sig_finish.connect(self.comando_terminado)
@@ -71,7 +71,9 @@ class GMachine(QObject):
     def release(self):
         """ Free all resources.
         """
+        self.watchdog.stop()
         self.hal.deinit()
+        
 
     def reset(self):
         """ Reinitialize all program configurable thing.
@@ -126,7 +128,7 @@ class GMachine(QObject):
         gen = PulseGeneratorLinear(delta, velocity)     # paso unidades de paso a pulsos
         self.__check_velocity(gen.max_velocity())
         self.hal.move(gen)
-        print("movestart")
+        #print("movestart")
         #=======================================================================
         # self.Wmove.load_generator(gen)
         # self.Tmove.start()
@@ -318,7 +320,7 @@ class GMachine(QObject):
         if self._absoluteCoordinates:
             coord = gcode.coordinates(self._position - self._local, #gcode coordinates devuelve los params del gcode si se le envia 
                                       self._convertCoordinates)        #un objeto coordinates no le interesan los valores
-            print(self._position - self._local, self._position , self._local, coord)
+            #print(self._position - self._local, self._position , self._local, coord)
             coord = coord + self._local                             #solo sirve si se usa G92
             delta = coord - self._position                          
         else:
@@ -364,7 +366,7 @@ class GMachine(QObject):
             
         elif c == 'G1':  # linear interpolation
             self._move_linear(delta, velocity)
-            print("g1")
+            
             
         elif c == 'G2':  # circular interpolation, clockwise
             self._move_circular(delta, radius, velocity, CW)

@@ -1,21 +1,22 @@
-'''
-Created on 10 ene. 2019
+import socket
+import os
 
-@author: revolution
-'''
-from Comunicacion.ClaseCliente import Cliente
-from Maquina.ClaseMaquina import Maquina
-from Paginas.VentanaPrincipal import Ui_MainWindow
+
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 from PyQt5.QtCore import QThread,pyqtSignal,pyqtSlot
 from PyQt5.Qt import QMessageBox
+
 from Paginas.VentanaConfiguraciones import Ui_Dialog
-import Pycnc
-import socket
-import os
-from Pycnc.config import TABLE_SIZE_X_MM
+from Paginas.VentanaPrincipal import Ui_MainWindow
+
+#import Pycnc
+#from Pycnc.config import TABLE_SIZE_X_MM
 #from Pycnc.hal_virtual import Signal
+
+from Comunicacion.ClaseCliente import Cliente
+from Maquina.ClaseMaquina import Maquina
+
 
 
 class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
@@ -47,18 +48,20 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
                 
             self.setupUi(self)
 
-            self.show()
+            
             #===================================================================
             # f = open("C:\\Users\Lucas\git\ProyectoFinal\Pycnc\config.py", "r")
             # print(f.read())
             #===================================================================
-            self.InitGUI()
-            
             self.InitWorkerThreadCliente()
             
             self.InitWorkerThreadMaquina()
+                        
+            self.InitGUI()
 
-            self.TMaquina.start()
+            #self.TMaquina.start()
+            
+            self.show()
         
         def InitGUI(self):
             
@@ -112,19 +115,19 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
             
             self.TCliente.started.connect(self.WCliente.Run)
 
-
         def InitWorkerThreadMaquina(self):
             
             self.WMaquina.moveToThread(self.TMaquina)
+            
             self.WMaquina.Signal_msg.connect(self.Write_console)
             self.WMaquina.Signal_status.connect(self.Write_status)
             self.WMaquina.Signal_progre.connect(self.Progress_bar)
             self.WMaquina.Signal_pos.connect(self.show_lcd_funcion)
             self.WMaquina.Sig_fin_archivo.connect(self.finWmaquina)
-            self.WMaquina.CNC.hal.Signal_msg.connect(self.show_lcd_funcion)
+            self.WMaquina.gmachine.hal.Signal_msg.connect(self.show_lcd_funcion)
             
             self.Sig_abortar.connect(self.WMaquina.Abortar)
-            self.Sig_Gcom.connect(self.WMaquina.CNC.changeGcomands)
+            self.Sig_Gcom.connect(self.WMaquina.gmachine.changeGcomands)
             self.Sig_arch_flujo.connect(self.WMaquina.Control)
             self.Sig_do_line.connect(self.WMaquina.do_line)
             
@@ -237,8 +240,7 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
                 self.TCliente.wait()
                 self.ConectarBoton.setEnabled(True)
                 self.DesconectarBoton.setEnabled(False)
-                if self.TCliente.isRunning() is True:
-                    print("Vive")
+
             except Exception as e:
                 print(str(e))
                 pass
@@ -283,26 +285,32 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
                 return 'Error'+str(e)        
             
         def closeEvent(self, event):
-                
+            print('close event')
+            if self.TMaquina.isRunning() is True:
+                print('Stopped TMaquina')
+                self.WMaquina.gmachine.release()
+                self.TMaquina.quit()
+                self.TMaquina.wait()                
+
             if self.TCliente.isRunning() is True:
                 #close = QMessageBox(self)
                 close = QMessageBox.question(self, 'Aun hay conexiones pendientes       ', "Deseas salir?", QMessageBox.Yes | QMessageBox.No)
                 
                 if close == QMessageBox.Yes:
                     self.Sig_Control.emit("Detener")
-                    print("Cliente Cerrado")
+
                     self.TCliente.quit()
                     self.TCliente.wait(1000)
                     event.accept()
                 if close == QMessageBox.No:
                     event.ignore()
-            else:
-                event.accept()    
+            
+            event.accept()    
             
         def finWmaquina(self):
                 self.TMaquina.quit()
                 self.TMaquina.wait()
-                print("Finalizo la maquina: Aplicacion")
+
                 self.StartBoton.setEnabled(True)
                 self.PauseBoton.setEnabled(False)
                 self.StopBoton.setEnabled(False)
@@ -361,7 +369,7 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
             
             self.ui2.tableWidget.insertRow(numRows)
             self.ui2.tableWidget.setItem(numRows,0,QtWidgets.QTableWidgetItem("Magnitud"))
-            if self.WMaquina.CNC._convertCoordinates == 1.0:
+            if self.WMaquina.gmachine._convertCoordinates == 1.0:
                 self.ui2.tableWidget.setItem(numRows,1,QtWidgets.QTableWidgetItem("mm"))
             else:
                 self.ui2.tableWidget.setItem(numRows,1,QtWidgets.QTableWidgetItem("inches"))
@@ -369,13 +377,13 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
             
             self.ui2.tableWidget.insertRow(numRows)
             self.ui2.tableWidget.setItem(numRows,0,QtWidgets.QTableWidgetItem("Plano"))
-            self.ui2.tableWidget.setItem(numRows,1,QtWidgets.QTableWidgetItem(str(self.WMaquina.CNC._plane)))
+            self.ui2.tableWidget.setItem(numRows,1,QtWidgets.QTableWidgetItem(str(self.WMaquina.gmachine._plane)))
             
             numRows += 1
             
             self.ui2.tableWidget.insertRow(numRows)
             self.ui2.tableWidget.setItem(numRows,0,QtWidgets.QTableWidgetItem("Coordenadas"))
-            if self.WMaquina.CNC._absoluteCoordinates == True:
+            if self.WMaquina.gmachine._absoluteCoordinates == True:
                 self.ui2.tableWidget.setItem(numRows,1,QtWidgets.QTableWidgetItem("Absolutas"))
             else:
                 self.ui2.tableWidget.setItem(numRows,1,QtWidgets.QTableWidgetItem("Relativas"))

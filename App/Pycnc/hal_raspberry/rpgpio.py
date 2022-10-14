@@ -83,7 +83,7 @@ class GPIO(object):
 # clock for delay). So, do not create two or more instances of DMAGPIO.
 
 class DMAGPIO(DMAProto):
-    _DMA_CONTROL_BLOCK_SIZE = 32
+    _DMA_CONTROL_BLOCK_SIZE = 32 
     _DMA_CHANNEL = 4
 
     def __init__(self):

@@ -1,9 +1,9 @@
 import time
 
+
 from Pycnc.hal_raspberry import rpgpio
 from Pycnc.pulses import *
 from Pycnc.config import *
-from Pycnc.sensors import thermistor
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.Qt import QObject
 
@@ -20,7 +20,7 @@ STEP_PIN_MASK_Z = 1 << STEPPER_STEP_PIN_Z
 STEP_PIN_MASK_E = 1 << STEPPER_STEP_PIN_E
 
 
-class hal1(QObject):
+class hal(QObject):
     Signal_msg = pyqtSignal(float,float,float)
 
     def __init__(self):
@@ -48,7 +48,7 @@ class hal1(QObject):
         gpio.clear(EXTRUDER_HEATER_PIN)
         gpio.clear(BED_HEATER_PIN)
         gpio.clear(STEPPERS_ENABLE_PIN)
-        watchdog.start()
+        watchdog.start() #rgpio watchdog
     
     
     def spindle_control(self,percent):
@@ -60,53 +60,6 @@ class hal1(QObject):
             pwm.add_pin(SPINDLE_PWM_PIN, percent)
         else:
             pwm.remove_pin(SPINDLE_PWM_PIN)
-    
-    
-    def fan_control(self,on_off):
-        """
-        Cooling fan control.
-        :param on_off: boolean value if fan is enabled.
-        """
-        if on_off:
-            logging.info("Fan is on")
-            gpio.set(FAN_PIN)
-        else:
-            logging.info("Fan is off")
-            gpio.clear(FAN_PIN)
-    
-    
-    def extruder_heater_control(self,percent):
-        """ Extruder heater control.
-        :param percent: heater power in percent 0..100. 0 turns heater off.
-        """
-        if percent > 0:
-            pwm.add_pin(EXTRUDER_HEATER_PIN, percent)
-        else:
-            pwm.remove_pin(EXTRUDER_HEATER_PIN)
-    
-    
-    def bed_heater_control(self,percent):
-        """ Hot bed heater control.
-        :param percent: heater power in percent 0..100. 0 turns heater off.
-        """
-        if percent > 0:
-            pwm.add_pin(BED_HEATER_PIN, percent)
-        else:
-            pwm.remove_pin(BED_HEATER_PIN)
-    
-    
-    def get_extruder_temperature(self):
-        """ Measure extruder temperature.
-        :return: temperature in Celsius.
-        """
-        return thermistor.get_temperature(EXTRUDER_TEMPERATURE_SENSOR_CHANNEL)
-    
-    
-    def get_bed_temperature(self):
-        """ Measure bed temperature.
-        :return: temperature in Celsius.
-        """
-        return thermistor.get_temperature(BED_TEMPERATURE_SENSOR_CHANNEL)
     
     
     def disable_steppers(self):
@@ -229,7 +182,7 @@ class hal1(QObject):
         acum = 0
         positivo = 1
         negativo = -1
-        Pulsos = list()
+        Pulsos = list() #x,y,z
         # enable steppers
         gpio.clear(STEPPERS_ENABLE_PIN)
         # 4 control blocks per 32 bytes
@@ -246,7 +199,7 @@ class hal1(QObject):
         x = 0
         y = 0
         z = 0
-        for direction, tx, ty, tz, te in generator:
+        for direction, tx, ty, tz, te  in generator:
             px=0
             py=0
             pz=0
@@ -258,6 +211,7 @@ class hal1(QObject):
                         k0 = k
                         st = time.time()
                         break  # previous dma sequence has stopped
+            
             if direction:  # set up directions
                 pins_to_set = 0
                 pins_to_clear = 0
@@ -285,28 +239,36 @@ class hal1(QObject):
                     pins_to_set |= 1 << STEPPER_DIR_PIN_E
                 dma.add_set_clear(pins_to_set, pins_to_clear)
                 continue
+            
             pins = 0
             m = None
+            
             for i in (tx, ty, tz, te):
                 if i is not None and (m is None or i < m):
                     m = i
+            
             k = int(round(m * US_IN_SECONDS))
+            
             if tx is not None:
                 pins |= STEP_PIN_MASK_X
-                px=x
+                px +=x 
             if ty is not None:
                 pins |= STEP_PIN_MASK_Y
-                py=y
+                py +=y
             if tz is not None:
                 pins |= STEP_PIN_MASK_Z
-                pz=z
+                pz +=z
             if te is not None:
                 pins |= STEP_PIN_MASK_E
+            
             if k - prev > 0:
                 dma.add_delay(k - prev)
                 
             dma.add_pulse(pins, STEPPER_PULSE_LENGTH_US)
-            Pulsos.append([x,y,z])
+            paso = list([px,py,pz])
+            Pulsos.append(paso)
+            print([px,py,pz])
+            px,py,pz = 0,0,0
             #self.Signal_msg.emit(x,y,z)
 
             # TODO not a precise way! pulses will set in queue, instead of crossing
@@ -328,10 +290,10 @@ class hal1(QObject):
                         instant = False
                     else:
                         dma.run_stream()
-                        for xyz in Pulsos:
-                            self.Signal_msg.emit(xyz[0],xyz[1],xyz[2])
-                            time.sleep(1/1000000)
                         is_ran = True
+        for p in Pulsos:
+            self.Signal_msg.emit(p[0],p[1],p[2])
+            time.sleep(1/1000000)
         pt = time.time()
         if not is_ran:
             # after long command, we can fill short buffer, that why we may need to

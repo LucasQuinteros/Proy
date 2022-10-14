@@ -1,5 +1,6 @@
 from __future__ import division
 import time
+from Pycnc.watchdog import HardwareWatchdog
 
 
 from Pycnc.pulses import *
@@ -12,26 +13,30 @@ from PyQt5.Qt import QObject,QApplication,pyqtSlot
 """ This is virtual device class which is very useful for debugging.
     It checks PulseGenerator with some tests.
 """
-class hal1(QObject):
+
+
+
+class hal(QObject):
     Signal_msg = pyqtSignal(float,float,float)
     Sig_finish = pyqtSignal()
-    
-    
+
     def __init__(self):
         """ Initialize GPIO pins and machine itself.
         """
         super().__init__()
         logging.info("initialize hal")
-        print("initialize hal")
+        #print("     initialize hal")
         self.__detener = False
         self.acum = 0
+        
+        #watchdog.start() #inicializaria el HW que no existe en este modo
+    
     def spindle_control(self,percent):
         """ Spindle control implementation 0..100.
         :param percent: Spindle speed in percent.
         """
         logging.info("spindle control: {}%".format(percent))
         print("spindle control: {}%".format(percent))
-    
     
     def disable_steppers(self):
         """ Disable all steppers until any movement occurs.
@@ -50,7 +55,6 @@ class hal1(QObject):
         logging.info("hal calibrate, x={}, y={}, z={}".format(x, y, z))
         print("hal calibrate, x={}, y={}, z={}".format(x, y, z))
         return True
-    
     
     # noinspection PyUnusedLocal
     
@@ -173,9 +177,10 @@ class hal1(QObject):
                 "interpolation time or pulses wrong"
             
             for x in pulsos:
-                print(x)               
+                #print(x)               
                 self.Signal_msg.emit(x[0],x[1],x[2])
                 time.sleep(1/1000)
+            
             #=======================================================================
             # print("Moved {}, {}, {}, {} iterations".format(ix, iy, iz, ie))
             # print("prepared in " + str(round(pt - st, 2)) + "s, estimated "
@@ -191,7 +196,6 @@ class hal1(QObject):
         self.__detener = False
     
     
-    
     def join(self):
         """ Wait till motors work.
         """
@@ -201,15 +205,21 @@ class hal1(QObject):
     def deinit(self):
         """ De-initialise.
         """
+        self.join()
+        self.disable_steppers()
+        print('watchdog stopped')
+        #watchdog.stop()    #stop el HW que no existe en este modo
+        
         logging.info("hal deinit()")
         print("hal deinit()")
     
-    def watchdog_feed(self):
-        """ Feed hardware watchdog.
-        """
-        print("1")
-        pass
+
     @pyqtSlot()
     def Detener(self):
         pass
         #self.__detener = True
+    
+    def watchdog_feed(self):
+            """ Feed hardware watchdog. """
+            print("\nhal virtual  watchdog virtual feed")
+            

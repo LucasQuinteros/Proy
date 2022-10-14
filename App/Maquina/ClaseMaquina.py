@@ -16,7 +16,7 @@ class Maquina(QObject):
     Sig_fin_archivo = pyqtSignal()
     Signal_abort    = pyqtSignal()
     #variables
-    CNC = GMachine()
+    
     
     line = ''
     File = None
@@ -24,15 +24,18 @@ class Maquina(QObject):
     
     def __init__(self):
         super().__init__()
+
         self.__Startfile = False
         self.__Stopfile  = False
         self.__Pausefile = False
         self.archivo = None
         self.comando = None
         self.numberLine = 0
-        self.CNC.Signal_msg.connect(self.posicion_funcion)
-        self.CNC.Signal_fin.connect(self.fin_handler)
-        #self.Signal_abort.connect(self.CNC.hal.Detener)
+        
+        self.gmachine = GMachine()
+        self.gmachine.Signal_msg.connect(self.posicion_funcion)
+        self.gmachine.Signal_fin.connect(self.fin_handler)
+        #self.Signal_abort.connect(self.gmachine.hal.Detener)
         self.x = 0
         self.y = 0
         self.z = 0
@@ -40,7 +43,7 @@ class Maquina(QObject):
     def Start(self):
   
             if self.archivo != None:
-                print(self.archivo)
+              
                 try: 
                     a = list()
                     f =  open(self.archivo, 'r')
@@ -63,7 +66,7 @@ class Maquina(QObject):
                             if self.__Pausefile is False:
                                 
                                 if lenght>self.numberLine:
-                                    print(a[self.numberLine])
+                                    
                                     if not self.do_line(a[self.numberLine],self.numberLine):
                                         break
                                     self.Signal_progre.emit()
@@ -74,14 +77,13 @@ class Maquina(QObject):
                             self.Signal_msg.emit('Se detuvo el programa',2,self.numberLine)
                             self.numberLine += 1
                             break
-                    print(self.numberLine)    
+                    
                     self.__Startfile = False
                     self.archivo = None
                     self.Signal_status.emit("Programa finalizado")
       
             elif self.comando != None:
-
-                print(self.comando)
+                print(' \n Clase Maquina: Comando ingresado')
                 self.do_line(self.comando,self.numberLine)
                 #self.Signal_msg.emit('OK ',2,self.numberLine)
                 self.numberLine = self.numberLine + 1
@@ -89,21 +91,22 @@ class Maquina(QObject):
                 self.comando = None     
                 self.Signal_status.emit("Comando finalizado")
    
-            print("\r\nExiting...")
+                print("\r\nClase Maquina: Comando finalizado")
                 
-            self.CNC.release()
+            #self.gmachine.release()
             self.Sig_fin_archivo.emit()
         
     def do_line(self, line, numberLine):
         try:
             g = GCode.parse_line(line)
-            res = self.CNC.do_command(g)
-            print(g)
+            res = self.gmachine.do_command(g)
+
         except (GCodeException, GMachineException) as e:
             if numberLine is not None:
                 self.Signal_msg.emit('ERROR ' + str(e),2, numberLine)
             print('ERROR ' + str(e))
             return False
+        
         if res is not None:
             if numberLine is not None:
                 self.Signal_msg.emit('OK ' + res,2,numberLine)
@@ -117,7 +120,7 @@ class Maquina(QObject):
         return True
 
     def StartFile(self, File: str, Modo = str):
-        print("Startfile funcion")
+       
         
         self.__Startfile = True
         self.__Stopfile = False
@@ -129,9 +132,10 @@ class Maquina(QObject):
         elif Modo == "Comando":
             self.Signal_status.emit("Realizando comando")
             self.comando = File
+    
     @pyqtSlot(str)
     def Control(self, Comando: str):
-        print(Comando)
+        
         if Comando == 'Pausa':
             self.__Stopfile = True
         if Comando == 'Stop':
@@ -151,11 +155,11 @@ class Maquina(QObject):
     @pyqtSlot()
     def fin_handler(self):
         self.__Pausefile = False
-        print("Termino el comando")
+       
     
     @pyqtSlot()
     def Abortar(self):
         self.Signal_abort.emit()
-        self.CNC.release()
-        print("abortar");
+        self.gmachine.release()
+
         

@@ -1,23 +1,32 @@
 import threading
 import time
 
-from Pycnc.hal import hal1
-
+import Pycnc.hal as h
 
 class HardwareWatchdog(threading.Thread):
     def __init__(self):
         """ Run feed loop for hardware watchdog.
         """
-        #super(HardwareWatchdog, self).__init__()
         super(HardwareWatchdog, self).__init__()
         self.setDaemon(True)
+        self.__stop = True
+        self.hal = h.hal()
         self.start()
-        self.hal = hal1()
+        
     def run(self):
-        while True:
-            #self.hal.watchdog_feed()
-            #self.hal.watchdog_feed()
+        print('Watchdog Started')
+        self.__stop = True
+        while self.__stop:
+            #print('\nthread Watchdog feed')
+            self.hal.watchdog_feed()
             time.sleep(3)
+            
+
+            
+    def stop(self):
+        print('watchdog stopped')
+        self.__stop = False
+        
 
 # for test purpose
 if __name__ == "__main__":
