@@ -286,11 +286,13 @@ class Ventana(QtWidgets.QMainWindow, Ui_MainWindow ):
             
         def closeEvent(self, event):
             print('close event')
+            #self.WMaquina.gmachine.release()
             if self.TMaquina.isRunning() is True:
                 print('Stopped TMaquina')
-                self.WMaquina.gmachine.release()
-                self.TMaquina.quit()
-                self.TMaquina.wait()                
+                
+                while bool(self.TMaquina.exit() ) :
+                    pass
+                #self.TMaquina.wait()                
 
             if self.TCliente.isRunning() is True:
                 #close = QMessageBox(self)

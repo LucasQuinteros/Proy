@@ -17,7 +17,7 @@ class HardwareWatchdog(threading.Thread):
         print('Watchdog Started')
         self.__stop = True
         while self.__stop:
-            #print('\nthread Watchdog feed')
+            print('\nthread Watchdog feed')
             self.hal.watchdog_feed()
             time.sleep(3)
             

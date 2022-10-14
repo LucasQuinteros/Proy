@@ -71,7 +71,7 @@ class GMachine(QObject):
     def release(self):
         """ Free all resources.
         """
-        self.watchdog.stop()
+        #self.watchdog.stop()
         self.hal.deinit()
         
 
